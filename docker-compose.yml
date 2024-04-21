@@ -1,0 +1,11 @@
+services:
+  website:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - ./assets:/assets
+    ports:
+      - "3000:3000"
+    environment:
+      IPINFO_TOKEN: ${IPINFO_TOKEN}

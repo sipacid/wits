@@ -70,7 +70,7 @@ func handler(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	filePath, err = generateVideo(filePath, ipAddr, ipInfo)
+	err = generateVideo(filePath, ipAddr, ipInfo)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))

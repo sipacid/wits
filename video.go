@@ -20,10 +20,10 @@ const (
 	fontFile          = "/assets/font.ttf"
 )
 
-func generateVideo(filePath, ipStr string, data *ipinfo.Core) (string, error) {
+func generateVideo(filePath, ipStr string, data *ipinfo.Core) error {
 	imgPath, err := generateImage(ipStr, data)
 	if err != nil {
-		return "", err
+		return err
 	}
 
 	cmd := exec.Command("ffmpeg",
@@ -39,14 +39,14 @@ func generateVideo(filePath, ipStr string, data *ipinfo.Core) (string, error) {
 
 	err = cmd.Run()
 	if err != nil {
-		return "", fmt.Errorf("error occurred when trying to generate video (%v): %v", err, stdErr.String())
+		return fmt.Errorf("error occurred when trying to generate video (%v): %v", err, stdErr.String())
 	}
 
 	if err := os.Remove(imgPath); err != nil {
-		return "", fmt.Errorf("error occurred when trying to delete image file: %v", err)
+		return fmt.Errorf("error occurred when trying to delete image file: %v", err)
 	}
 
-	return filePath, nil
+	return nil
 }
 
 func generateImage(ipStr string, data *ipinfo.Core) (string, error) {

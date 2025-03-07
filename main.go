@@ -13,8 +13,8 @@ import (
 )
 
 func isBot(r *http.Request) bool {
-	xRealIP := r.Header.Get("X-Real-IP")
-	if xRealIP == "" {
+	xForwardedFor := r.Header.Get("X-Forwarded-For")
+	if xForwardedFor == "" {
 		return true // This should always run behind a proxy
 	}
 
@@ -53,7 +53,7 @@ func handler(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipAddr := r.Header.Get("X-Real-IP")
+	ipAddr := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
 	filePath := fmt.Sprintf("/tmp/%v.mp4", generateFilename(ipAddr))
 
 	// File already exists, grabbing it and sending it instead of regenerating it.

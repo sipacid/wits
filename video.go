@@ -8,7 +8,6 @@ import (
 	"image/png"
 	"os"
 	"os/exec"
-	"strings"
 
 	"github.com/golang/freetype"
 	"github.com/ipinfo/go/v2/ipinfo"
@@ -20,8 +19,8 @@ const (
 	fontFile          = "/assets/font.ttf"
 )
 
-func generateVideo(filePath, ipStr string, data *ipinfo.Core) error {
-	imgPath, err := generateImage(ipStr, data)
+func generateVideo(filePath string, data *ipinfo.Core) error {
+	imgPath, err := generateImage(data.IP.String(), data)
 	if err != nil {
 		return err
 	}
@@ -114,11 +113,4 @@ func generateImage(ipStr string, data *ipinfo.Core) (string, error) {
 	}
 
 	return filePath, nil
-}
-
-func generateFilename(ipStr string) string {
-	ipStr = strings.ReplaceAll(ipStr, ".", "")
-	ipStr = strings.ReplaceAll(ipStr, ":", "")
-
-	return ipStr
 }

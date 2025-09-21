@@ -12,6 +12,13 @@ import (
 	"github.com/ipinfo/go/v2/ipinfo"
 )
 
+func generateFilename(ipStr string) string {
+	ipStr = strings.ReplaceAll(ipStr, ".", "")
+	ipStr = strings.ReplaceAll(ipStr, ":", "")
+
+	return ipStr
+}
+
 func isBot(r *http.Request) bool {
 	xForwardedFor := r.Header.Get("X-Forwarded-For")
 	if xForwardedFor == "" {
@@ -45,8 +52,7 @@ func handleFileSend(filePath string, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filePath)
 }
 
-func handler(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
-	// Handle bots
+func handleVideo(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 	if isBot := isBot(r); isBot {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -70,7 +76,50 @@ func handler(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = generateVideo(filePath, ipAddr, ipInfo)
+	err = generateVideo(filePath, ipInfo)
+	if err != nil {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("418 - I'm a teapot"))
+		log.Printf("error occurred when trying to generate video : %v", err)
+		return
+	}
+
+	handleFileSend(filePath, w, r)
+
+	// Aight, we've sent the file, let's delete it after a few mins. Don't care if it fails, fuckyou.
+	time.AfterFunc(2*time.Minute, func() {
+		if err := os.Remove(filePath); err != nil {
+			log.Printf("Failed to delete video file: %v", err)
+		}
+	})
+}
+
+func handleButton(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
+	if isBot := isBot(r); isBot {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("418 - I'm a teapot"))
+		return
+	}
+
+	userAgent := strings.TrimSpace(strings.Split(r.Header.Get("User-Agent"), ",")[0])
+	ipAddr := strings.TrimSpace(strings.Split(r.Header.Get("X-Forwarded-For"), ",")[0])
+	filePath := fmt.Sprintf("/tmp/%v.gif", generateFilename(ipAddr))
+
+	// File already exists, grabbing it and sending it instead of regenerating it.
+	if _, err := os.Stat(filePath); err == nil {
+		handleFileSend(filePath, w, r)
+		return
+	}
+
+	ipInfo, err := c.GetIPInfo(net.ParseIP(ipAddr))
+	if err != nil {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("418 - I'm a teapot"))
+		log.Printf("error occurred when trying to retrieve data from IPInfo: %v", err)
+		return
+	}
+
+	err = generateButton(filePath, userAgent, ipInfo)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -96,8 +145,12 @@ func main() {
 
 	ipinfo_client := ipinfo.NewClient(nil, nil, token)
 
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		handler(ipinfo_client, w, r)
+	http.HandleFunc("/wits.mp4", func(w http.ResponseWriter, r *http.Request) {
+		handleVideo(ipinfo_client, w, r)
 	})
+	http.HandleFunc("/wits.gif", func(w http.ResponseWriter, r *http.Request) {
+		handleButton(ipinfo_client, w, r)
+	})
+
 	log.Fatal(http.ListenAndServe(":3000", nil))
 }

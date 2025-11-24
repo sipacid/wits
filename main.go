@@ -50,12 +50,14 @@ func isBot(r *http.Request) bool {
 	userAgent := strings.ToLower(r.UserAgent())
 
 	// Discord embed
-	if userAgent == "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.10; rv:38.0) Gecko/20100101 Firefox/38.0" {
+	if userAgent == "mozilla/5.0 (macintosh; intel mac os x 10.10; rv:38.0) gecko/20100101 firefox/38.0" {
 		return true
 	}
 
 	// Bots that ignore robots.txt
-	if userAgent == "" || strings.Contains(userAgent, "bot") || strings.Contains(userAgent, "embed") || strings.Contains(userAgent, "crawl") || strings.Contains(userAgent, "spider") || strings.Contains(userAgent, "scrape") || strings.Contains(userAgent, "scrape") {
+	if userAgent == "" || strings.Contains(userAgent, "bot") || strings.Contains(userAgent, "embed") ||
+		strings.Contains(userAgent, "crawl") || strings.Contains(userAgent, "spider") ||
+		strings.Contains(userAgent, "scrape") || strings.Contains(userAgent, "scrape") {
 		return true
 	}
 
@@ -99,6 +101,13 @@ func handleVideo(w http.ResponseWriter, r *http.Request) {
 	}
 
 	ipData := getIPData(&netIPAddr)
+	if ipData == nil {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("418 - I'm a teapot"))
+		log.Printf("error occurred when trying to generate video : %v", err)
+		return
+	}
+
 	err = generateVideo(filePath, ipData)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
@@ -142,6 +151,12 @@ func handleButton(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	ipData := getIPData(&netIPAddr)
+	if ipData == nil {
+		w.WriteHeader(http.StatusTeapot)
+		w.Write([]byte("418 - I'm a teapot"))
+		log.Printf("error occurred when trying to generate video : %v", err)
+		return
+	}
 
 	err = generateButton(filePath, userAgent, ipData)
 	if err != nil {

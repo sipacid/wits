@@ -3,14 +3,36 @@ package main
 import (
 	"fmt"
 	"log"
-	"net"
 	"net/http"
+	"net/netip"
 	"os"
 	"strings"
 	"time"
 
-	"github.com/ipinfo/go/v2/ipinfo"
+	"github.com/oschwald/geoip2-golang/v2"
 )
+
+func getIPData(ipAddr *netip.Addr) *geoip2.City {
+	db, err := geoip2.Open("/geoip/GeoLite2-City.mmdb")
+	if err != nil {
+		log.Printf("error occurred when trying to retrieve data from mmdb: %v", err)
+		return nil
+	}
+	defer db.Close()
+
+	record, err := db.City(*ipAddr)
+	if err != nil {
+		log.Printf("error occurred when trying to retrieve data from mmdb: %v", err)
+		return nil
+	}
+
+	if !record.HasData() {
+		log.Printf("empty data returned when trying to retrieve data from mmdb")
+		return nil
+	}
+
+	return record
+}
 
 func generateFilename(ipStr string) string {
 	ipStr = strings.ReplaceAll(ipStr, ".", "")
@@ -52,7 +74,7 @@ func handleFileSend(filePath string, w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filePath)
 }
 
-func handleVideo(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
+func handleVideo(w http.ResponseWriter, r *http.Request) {
 	if isBot := isBot(r); isBot {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -68,7 +90,7 @@ func handleVideo(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipInfo, err := c.GetIPInfo(net.ParseIP(ipAddr))
+	netIPAddr, err := netip.ParseAddr(ipAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -76,7 +98,8 @@ func handleVideo(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = generateVideo(filePath, ipInfo)
+	ipData := getIPData(&netIPAddr)
+	err = generateVideo(filePath, ipData)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -94,7 +117,7 @@ func handleVideo(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-func handleButton(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
+func handleButton(w http.ResponseWriter, r *http.Request) {
 	if isBot := isBot(r); isBot {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -111,15 +134,16 @@ func handleButton(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	ipInfo, err := c.GetIPInfo(net.ParseIP(ipAddr))
+	netIPAddr, err := netip.ParseAddr(ipAddr)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
 		log.Printf("error occurred when trying to retrieve data from IPInfo: %v", err)
 		return
 	}
+	ipData := getIPData(&netIPAddr)
 
-	err = generateButton(filePath, userAgent, ipInfo)
+	err = generateButton(filePath, userAgent, ipData)
 	if err != nil {
 		w.WriteHeader(http.StatusTeapot)
 		w.Write([]byte("418 - I'm a teapot"))
@@ -138,18 +162,11 @@ func handleButton(c *ipinfo.Client, w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	token, present := os.LookupEnv("IPINFO_TOKEN")
-	if !present {
-		log.Fatal("IPINFO_TOKEN environment variable not set, exiting...")
-	}
-
-	ipinfo_client := ipinfo.NewClient(nil, nil, token)
-
 	http.HandleFunc("/wits.mp4", func(w http.ResponseWriter, r *http.Request) {
-		handleVideo(ipinfo_client, w, r)
+		handleVideo(w, r)
 	})
 	http.HandleFunc("/wits.gif", func(w http.ResponseWriter, r *http.Request) {
-		handleButton(ipinfo_client, w, r)
+		handleButton(w, r)
 	})
 
 	log.Fatal(http.ListenAndServe(":3000", nil))

@@ -10,7 +10,7 @@ import (
 	"os/exec"
 
 	"github.com/golang/freetype"
-	"github.com/ipinfo/go/v2/ipinfo"
+	"github.com/oschwald/geoip2-golang/v2"
 )
 
 const (
@@ -19,8 +19,8 @@ const (
 	fontFile          = "/assets/font.ttf"
 )
 
-func generateVideo(filePath string, data *ipinfo.Core) error {
-	imgPath, err := generateImage(data.IP.String(), data)
+func generateVideo(filePath string, data *geoip2.City) error {
+	imgPath, err := generateImage(data.Traits.IPAddress.String(), data)
 	if err != nil {
 		return err
 	}
@@ -48,11 +48,11 @@ func generateVideo(filePath string, data *ipinfo.Core) error {
 	return nil
 }
 
-func generateImage(ipStr string, data *ipinfo.Core) (string, error) {
+func generateImage(ipStr string, data *geoip2.City) (string, error) {
 	filePath := fmt.Sprintf("/tmp/%v.png", generateFilename(ipStr))
 	lines := []string{
 		ipStr,
-		fmt.Sprintf("%v, %v, %v [%v]", data.City, data.Region, data.CountryName, data.Location),
+		fmt.Sprintf("%v, %v [%v, %v]", data.City.Names.English, data.Country.Names.English, *data.Location.Latitude, *data.Location.Longitude),
 	}
 	fontSize := 36.0
 	fontColour := image.White

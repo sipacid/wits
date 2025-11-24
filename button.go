@@ -9,7 +9,7 @@ import (
 	"os"
 	"regexp"
 
-	"github.com/ipinfo/go/v2/ipinfo"
+	"github.com/oschwald/geoip2-golang/v2"
 	"golang.org/x/image/font"
 	"golang.org/x/image/font/opentype"
 	"golang.org/x/image/math/fixed"
@@ -20,7 +20,7 @@ const (
 	fontGIFFile     = "/assets/font.ttf"
 )
 
-func generateButton(filePath, userAgent string, data *ipinfo.Core) error {
+func generateButton(filePath, userAgent string, data *geoip2.City) error {
 	// Template GIF
 	gifFile, err := os.Open(templateGIFPath)
 	if err != nil {
@@ -56,7 +56,7 @@ func generateButton(filePath, userAgent string, data *ipinfo.Core) error {
 
 	re := regexp.MustCompile(`\(([^)]+)\)`)
 	userAgentPart := re.FindStringSubmatch(userAgent)
-	text := fmt.Sprintf("%v, %v, %v, %v", data.IP, data.City, data.Country, userAgentPart[1])
+	text := fmt.Sprintf("%v, %v, %v, %v", data.Traits.IPAddress, data.City.Names.English, data.Country.Names.English, userAgentPart[1])
 
 	// Measure text width
 	tempImg := image.NewRGBA(image.Rect(0, 0, 1000, 100))
